@@ -16,4 +16,8 @@
 .vscode
 
 # Artifacts
-terraform-provider-alicloud-cas
+.terraform
+*.tfstate
+*.tfstate.backup
+*.plan
+terraform-provider-alicloudssl

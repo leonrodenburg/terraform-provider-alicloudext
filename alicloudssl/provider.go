@@ -37,6 +37,13 @@ func Provider() terraform.ResourceProvider {
 	}
 }
 
+type Configuration struct {
+	AccessKey string
+	SecretKey string
+	Region    string
+	Client    *sdk.Client
+}
+
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	accessKey := d.Get("access_key").(string)
 	secretKey := d.Get("secret_key").(string)
@@ -46,5 +53,10 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return client, nil
+	return Configuration{
+		AccessKey: accessKey,
+		SecretKey: secretKey,
+		Region:    region,
+		Client:    client,
+	}, nil
 }

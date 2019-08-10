@@ -2,7 +2,6 @@ package alicloudssl
 
 import (
 	"strconv"
-	"strings"
 
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/cas"
@@ -32,14 +31,6 @@ func resourceCertificate() *schema.Resource {
 				Type:     schema.TypeString,
 				Required: true,
 				ForceNew: true,
-			},
-			"certificate": {
-				Type:     schema.TypeString,
-				Computed: true,
-			},
-			"private_key": {
-				Type:     schema.TypeString,
-				Computed: true,
 			},
 			"certificate_url": {
 				Type:     schema.TypeString,
@@ -83,8 +74,8 @@ func resourceCertificateCreate(d *schema.ResourceData, m interface{}) error {
 		return err
 	}
 
-	rawCertificate := sanitizePem(string(issuedCert.Certificate))
-	rawPrivateKey := sanitizePem(string(issuedCert.PrivateKey))
+	rawCertificate := certificates.Sanitize(string(issuedCert.Certificate))
+	rawPrivateKey := certificates.Sanitize(string(issuedCert.PrivateKey))
 
 	req := cas.CreateCreateUserCertificateRequest()
 	req.Cert = rawCertificate
@@ -98,16 +89,10 @@ func resourceCertificateCreate(d *schema.ResourceData, m interface{}) error {
 	}
 
 	d.SetId(strconv.Itoa(res.CertId))
-	_ = d.Set("certificate", rawCertificate)
-	_ = d.Set("private_key", rawPrivateKey)
 	_ = d.Set("certificate_url", issuedCert.CertURL)
 	_ = d.Set("certificate_stable_url", issuedCert.CertStableURL)
 
 	return resourceCertificateRead(d, m)
-}
-
-func sanitizePem(s string) string {
-	return strings.Replace(s, "\n\n", "\n", -1)
 }
 
 func resourceCertificateRead(d *schema.ResourceData, m interface{}) error {

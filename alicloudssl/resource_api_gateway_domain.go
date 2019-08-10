@@ -42,12 +42,10 @@ func resourceApiGatewayDomainCreate(d *schema.ResourceData, m interface{}) error
 		return err
 	}
 
-	record, err := createCnameForApiGroup(client, d.Get("domain").(string), group.SubDomain)
+	record, err := ensureCnameForApiGroup(client, d.Get("domain").(string), group.SubDomain)
 	if err != nil {
 		return err
 	}
-
-	_ = d.Set("record_id", record.RecordId)
 
 	req := cloudapi.CreateSetDomainRequest()
 	req.GroupId = groupId
@@ -59,8 +57,9 @@ func resourceApiGatewayDomainCreate(d *schema.ResourceData, m interface{}) error
 	}
 
 	d.SetId(res.RequestId)
+	_ = d.Set("record_id", record.RecordId)
 
-	return nil
+	return resourceApiGatewayDomainRead(d, m)
 }
 
 func resourceApiGatewayDomainRead(d *schema.ResourceData, m interface{}) error {
@@ -105,12 +104,23 @@ func resourceApiGatewayDomainDelete(d *schema.ResourceData, m interface{}) error
 	return nil
 }
 
-func createCnameForApiGroup(client *sdk.Client, domain string, value string) (*alidns.AddDomainRecordResponse, error) {
+func ensureCnameForApiGroup(client *sdk.Client, domain string, value string) (*alidns.Record, error) {
 	subdomain := "@"
 	if domainutil.HasSubdomain(domain) {
 		subdomain = domainutil.Subdomain(domain)
 	}
 	naked := domainutil.Domain(domain)
+
+	dnsReq := alidns.CreateDescribeDomainRecordsRequest()
+	dnsReq.DomainName = naked
+	dnsReq.RRKeyWord = subdomain
+	dnsReq.Type = "CNAME"
+	dnsReq.ValueKeyWord = value
+	dnsRes := alidns.CreateDescribeDomainRecordsResponse()
+	err := client.DoAction(dnsReq, dnsRes)
+	if dnsRes.TotalCount > 0 {
+		return &dnsRes.DomainRecords.Record[0], nil
+	}
 
 	req := alidns.CreateAddDomainRecordRequest()
 	req.DomainName = naked
@@ -118,11 +128,11 @@ func createCnameForApiGroup(client *sdk.Client, domain string, value string) (*a
 	req.Type = "CNAME"
 	req.Value = value
 	res := alidns.CreateAddDomainRecordResponse()
-	err := client.DoAction(req, res)
+	err = client.DoAction(req, res)
 	if err != nil {
 		return nil, err
 	}
-	return res, nil
+	return &alidns.Record{RecordId: res.RecordId}, nil
 }
 
 func fetchApiGroup(client *sdk.Client, groupId string) (*cloudapi.DescribeApiGroupResponse, error) {

@@ -5,6 +5,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"strings"
 
 	"github.com/go-acme/lego/v3/certcrypto"
 	"github.com/go-acme/lego/v3/certificate"
@@ -85,4 +86,8 @@ func CreateCertClientForUser(user *User) (*lego.Client, error) {
 
 func getNewPrivateKey() (*ecdsa.PrivateKey, error) {
 	return ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+}
+
+func Sanitize(s string) string {
+	return strings.Replace(s, "\n\n", "\n", -1)
 }

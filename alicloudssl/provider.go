@@ -12,6 +12,8 @@ func Provider() terraform.ResourceProvider {
 	return &schema.Provider{
 		ResourcesMap: map[string]*schema.Resource{
 			"alicloudssl_certificate": resourceCertificate(),
+			"alicloudssl_api_gateway_domain": resourceApiGatewayDomain(),
+			"alicloudssl_api_gateway_domain_certificate": resourceApiGatewayDomainCertificate(),
 		},
 		Schema: map[string]*schema.Schema{
 			"access_key": {

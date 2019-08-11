@@ -1,15 +1,13 @@
-package alicloudssl
+package alicloudext
 
 import (
-	"errors"
-
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/cas"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/cloudapi"
 	"github.com/hashicorp/terraform/helper/schema"
 
-	"github.com/leonrodenburg/terraform-provider-alicloudssl/pkg/certificates"
+	"github.com/leonrodenburg/terraform-provider-alicloudext/pkg/certificates"
 )
 
 func resourceApiGatewayDomainCertificate() *schema.Resource {
@@ -76,12 +74,13 @@ func resourceApiGatewayDomainCertificateRead(d *schema.ResourceData, m interface
 	res := cloudapi.CreateDescribeDomainResponse()
 	err := client.DoAction(req, res)
 	if err != nil {
-		return err
+		d.SetId("")
+		return nil
 	}
 
 	if len(res.CertificateId) < 0 {
 		d.SetId("")
-		return errors.New("no certificate bound to API Gateway group")
+		return nil
 	}
 
 	_ = d.Set("system_certificate_id", res.CertificateId)

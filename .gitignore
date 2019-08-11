@@ -7,7 +7,7 @@
 
 # Test binary, build with `go test -c`
 *.test
-test/
+local/
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
@@ -21,4 +21,4 @@ test/
 *.tfstate
 *.tfstate.backup
 *.plan
-terraform-provider-alicloudssl
+terraform-provider-alicloudext

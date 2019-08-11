@@ -1,11 +1,15 @@
-package alicloudssl
+package alicloudext
 
 import (
+	"time"
+
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk"
+	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/alidns"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/cloudapi"
 	"github.com/bobesa/go-domain-util/domainutil"
 	"github.com/hashicorp/terraform/helper/schema"
+	"github.com/pkg/errors"
 )
 
 func resourceApiGatewayDomain() *schema.Resource {
@@ -13,7 +17,9 @@ func resourceApiGatewayDomain() *schema.Resource {
 		Create: resourceApiGatewayDomainCreate,
 		Read:   resourceApiGatewayDomainRead,
 		Delete: resourceApiGatewayDomainDelete,
-
+		Timeouts: &schema.ResourceTimeout {
+			Create: schema.DefaultTimeout(10 * time.Minute),
+		},
 		Schema: map[string]*schema.Schema{
 			"group_id": {
 				Type:     schema.TypeString,
@@ -47,19 +53,35 @@ func resourceApiGatewayDomainCreate(d *schema.ResourceData, m interface{}) error
 		return err
 	}
 
-	req := cloudapi.CreateSetDomainRequest()
-	req.GroupId = groupId
-	req.DomainName = d.Get("domain").(string)
-	res := cloudapi.CreateSetDomainResponse()
-	err = client.DoAction(req, res)
-	if err != nil {
-		return err
+	retries := 0
+	requestId, err := bindDomainToApiGateway(groupId, d.Get("domain").(string), client)
+	for len(requestId) < 1 && retries < 60 {
+		time.Sleep(1 * time.Second)
+		requestId, err = bindDomainToApiGateway(groupId, d.Get("domain").(string), client)
+		retries++
 	}
 
-	d.SetId(res.RequestId)
+	if err != nil {
+		return errors.Wrap(err, "failed to resolve CNAME to API Gateway group subdomain")
+	}
+
+	d.SetId(requestId)
 	_ = d.Set("record_id", record.RecordId)
 
 	return resourceApiGatewayDomainRead(d, m)
+}
+
+func bindDomainToApiGateway(groupId string, domain string, client *sdk.Client) (string, error) {
+	req := cloudapi.CreateSetDomainRequest()
+	req.GroupId = groupId
+	req.DomainName = domain
+	res := cloudapi.CreateSetDomainResponse()
+	err := client.DoAction(req, res)
+	if err != nil {
+		return "", err
+	}
+
+	return res.RequestId, nil
 }
 
 func resourceApiGatewayDomainRead(d *schema.ResourceData, m interface{}) error {
@@ -68,11 +90,10 @@ func resourceApiGatewayDomainRead(d *schema.ResourceData, m interface{}) error {
 	req.GroupId = d.Get("group_id").(string)
 	req.DomainName = d.Get("domain").(string)
 	res := cloudapi.CreateDescribeDomainResponse()
-
 	err := client.DoAction(req, res)
 	if err != nil {
 		d.SetId("")
-		return err
+		return nil
 	}
 
 	_ = d.Set("domain", res.DomainName)
@@ -127,6 +148,7 @@ func ensureCnameForApiGroup(client *sdk.Client, domain string, value string) (*a
 	req.RR = subdomain
 	req.Type = "CNAME"
 	req.Value = value
+	req.TTL = requests.NewInteger(600) // 10 minutes, minimum for free edition
 	res := alidns.CreateAddDomainRecordResponse()
 	err = client.DoAction(req, res)
 	if err != nil {

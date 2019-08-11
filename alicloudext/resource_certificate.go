@@ -1,4 +1,4 @@
-package alicloudssl
+package alicloudext
 
 import (
 	"strconv"
@@ -7,7 +7,7 @@ import (
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/cas"
 	"github.com/hashicorp/terraform/helper/schema"
 
-	"github.com/leonrodenburg/terraform-provider-alicloudssl/pkg/certificates"
+	"github.com/leonrodenburg/terraform-provider-alicloudext/pkg/certificates"
 )
 
 func resourceCertificate() *schema.Resource {

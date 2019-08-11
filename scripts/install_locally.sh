@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-PROVIDER_NAME="terraform-provider-alicloudssl"
+PROVIDER_NAME="terraform-provider-alicloudext"
 
 echo "Building Terraform provider..."
 go build -o $PROVIDER_NAME ./

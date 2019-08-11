@@ -14,8 +14,7 @@ jobs:
     working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
     steps:
       - checkout
-      - run: gox -o out/
-      - run: go test -v ./...
+      - run: gox
       - persist_to_workspace:
           root: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
           paths: out/
@@ -24,4 +23,5 @@ workflows:
   main:
     jobs:
       - test
-      - build
+      - build:
+          requires: test

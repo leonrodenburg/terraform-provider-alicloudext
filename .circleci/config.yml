@@ -3,7 +3,6 @@ jobs:
   test:
     docker:
       - image: circleci/golang:1.12
-    working_directory: /goroot/src/github.com/leonrodenburg/terraform-provider-alicloudext
     steps:
       - checkout
       - run: go get -v -t -d ./...
@@ -11,13 +10,11 @@ jobs:
   build:
     docker:
       - image: tcnksm/gox
-    working_directory: /goroot/src/github.com/leonrodenburg/terraform-provider-alicloudext
     steps:
       - checkout
       - run: go get -v -t -d ./...
       - run: gox -output="bin/{{.OS}}-{{.Arch}}/{{.Dir}}" -os="linux windows darwin" -arch="amd64" -parallel=1
       - persist_to_workspace:
-          root: /goroot/src/github.com/leonrodenburg/terraform-provider-alicloudext
           paths: bin/
 workflows:
   version: 2

@@ -5,14 +5,15 @@ jobs:
       - image: circleci/golang:1.12
     steps:
       - checkout
-      - run: go get -v
+      - run: go get -v -d
       - run: go test -v ./...
   build:
     docker:
-      - image: tcnksm/gox
+      - image: circleci/golang:1.12
     steps:
       - checkout
-      - run: go get -v
+      - run: go get github.com/mitchellh/gox
+      - run: go get -v -d
       - run: gox -output="bin/{{.OS}}-{{.Arch}}/{{.Dir}}" -os="linux windows darwin" -arch="amd64" -parallel=1
       - persist_to_workspace:
           root: .

@@ -84,10 +84,10 @@ func CreateCertClientForUser(user *User) (*lego.Client, error) {
 	return client, nil
 }
 
-func getNewPrivateKey() (*ecdsa.PrivateKey, error) {
-	return ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-}
-
 func Sanitize(s string) string {
 	return strings.Replace(s, "\n\n", "\n", -1)
+}
+
+func getNewPrivateKey() (*ecdsa.PrivateKey, error) {
+	return ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 }

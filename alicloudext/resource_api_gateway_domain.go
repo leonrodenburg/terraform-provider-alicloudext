@@ -4,10 +4,12 @@ import (
 	"time"
 
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk"
+	aliclouderrors "github.com/aliyun/alibaba-cloud-sdk-go/sdk/errors"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/alidns"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/cloudapi"
 	"github.com/bobesa/go-domain-util/domainutil"
+	"github.com/hashicorp/terraform/helper/resource"
 	"github.com/hashicorp/terraform/helper/schema"
 	"github.com/pkg/errors"
 )
@@ -17,7 +19,7 @@ func resourceApiGatewayDomain() *schema.Resource {
 		Create: resourceApiGatewayDomainCreate,
 		Read:   resourceApiGatewayDomainRead,
 		Delete: resourceApiGatewayDomainDelete,
-		Timeouts: &schema.ResourceTimeout {
+		Timeouts: &schema.ResourceTimeout{
 			Create: schema.DefaultTimeout(10 * time.Minute),
 		},
 		Schema: map[string]*schema.Schema{
@@ -53,22 +55,23 @@ func resourceApiGatewayDomainCreate(d *schema.ResourceData, m interface{}) error
 		return err
 	}
 
-	retries := 0
-	requestId, err := bindDomainToApiGateway(groupId, d.Get("domain").(string), client)
-	for len(requestId) < 1 && retries < 60 {
-		time.Sleep(1 * time.Second)
-		requestId, err = bindDomainToApiGateway(groupId, d.Get("domain").(string), client)
-		retries++
-	}
-
-	if err != nil {
-		return errors.Wrap(err, "failed to resolve CNAME to API Gateway group subdomain")
-	}
-
-	d.SetId(requestId)
 	_ = d.Set("record_id", record.RecordId)
 
-	return resourceApiGatewayDomainRead(d, m)
+	return resource.Retry(d.Timeout(schema.TimeoutCreate), func() *resource.RetryError {
+		requestId, err := bindDomainToApiGateway(groupId, d.Get("domain").(string), client)
+
+		if err != nil {
+			if serverError, ok := err.(*aliclouderrors.ServerError); ok {
+				if serverError.ErrorCode() == "DomainNotResolved" {
+					return resource.RetryableError(errors.Wrap(serverError, "failed to resolve CNAME to API Gateway group subdomain"))
+				}
+			}
+			return resource.NonRetryableError(err)
+		}
+
+		d.SetId(requestId)
+		return resource.NonRetryableError(resourceApiGatewayDomainRead(d, m))
+	})
 }
 
 func bindDomainToApiGateway(groupId string, domain string, client *sdk.Client) (string, error) {

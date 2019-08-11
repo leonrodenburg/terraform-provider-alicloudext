@@ -46,12 +46,14 @@ type Configuration struct {
 	Client    *sdk.Client
 }
 
+var createClient = sdk.NewClientWithAccessKey
+
 func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 	accessKey := d.Get("access_key").(string)
 	secretKey := d.Get("secret_key").(string)
 	region := d.Get("region").(string)
 
-	client, err := sdk.NewClientWithAccessKey(region, accessKey, secretKey)
+	client, err := createClient(region, accessKey, secretKey)
 	if err != nil {
 		return nil, err
 	}

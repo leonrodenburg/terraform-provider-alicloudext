@@ -3,7 +3,7 @@ jobs:
   test:
     docker:
       - image: circleci/golang:1.12
-    working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
+    working_directory: /go/src/github.com/{{CIRCLE_PROJECT_USERNAME}}/{{CIRCLE_PROJECT_REPONAME}}
     steps:
       - checkout
       - run: go get -v -t -d ./...
@@ -11,12 +11,12 @@ jobs:
   build:
     docker:
       - image: tcnksm/gox
-    working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
+    working_directory: /go/src/github.com/{{CIRCLE_PROJECT_USERNAME}}/{{CIRCLE_PROJECT_REPONAME}}
     steps:
       - checkout
       - run: gox -output="bin/{{.OS}}-{{.Arch}}/{{.Dir}}" -os="linux windows darwin" -arch="amd64"
       - persist_to_workspace:
-          root: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
+          root: /go/src/github.com/{{CIRCLE_PROJECT_USERNAME}}/{{CIRCLE_PROJECT_REPONAME}}
           paths: bin/
 workflows:
   version: 2

@@ -14,7 +14,8 @@ jobs:
     working_directory: /tmp/go
     steps:
       - checkout
-      - run: gox -output="bin/{{.OS}}-{{.Arch}}/{{.Dir}}" -os="linux windows darwin" -arch="amd64"
+      - run: go get -v -t -d ./...
+      - run: gox -output="bin/{{.OS}}-{{.Arch}}/{{.Dir}}" -os="linux windows darwin" -arch="amd64" -parallel=1
       - persist_to_workspace:
           root: /tmp/go
           paths: bin/

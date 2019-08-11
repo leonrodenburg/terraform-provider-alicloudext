@@ -14,10 +14,10 @@ jobs:
     working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
     steps:
       - checkout
-      - run: gox -os="linux windows darwin" -arch="amd64"
+      - run: gox -output="bin/{{.OS}}-{{.Arch}}/{{.Dir}}" -os="linux windows darwin" -arch="amd64"
       - persist_to_workspace:
           root: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
-          paths: out/
+          paths: bin/
 workflows:
   version: 2
   main:

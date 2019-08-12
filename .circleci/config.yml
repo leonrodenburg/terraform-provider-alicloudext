@@ -18,6 +18,8 @@ jobs:
       - persist_to_workspace:
           root: .
           paths: bin/
+      - store_artifacts:
+          path: ./bin
 workflows:
   version: 2
   main:

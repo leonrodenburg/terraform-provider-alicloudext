@@ -1,7 +1,6 @@
 package alicloudext
 
 import (
-	"github.com/aliyun/alibaba-cloud-sdk-go/sdk"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/cas"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/cloudapi"
@@ -41,9 +40,10 @@ func resourceApiGatewayDomainCertificate() *schema.Resource {
 }
 
 func resourceApiGatewayDomainCertificateCreate(d *schema.ResourceData, m interface{}) error {
-	client := m.(Configuration).Client
+	client, _ := createCloudApiClient(m.(Configuration))
+	casClient, _ := createCasClient(m.(Configuration))
 
-	certRes, err := fetchCertificateById(d.Get("certificate_id").(int), client)
+	certRes, err := fetchCertificateById(d.Get("certificate_id").(int), casClient)
 	if err != nil {
 		return err
 	}
@@ -66,7 +66,7 @@ func resourceApiGatewayDomainCertificateCreate(d *schema.ResourceData, m interfa
 }
 
 func resourceApiGatewayDomainCertificateRead(d *schema.ResourceData, m interface{}) error {
-	client := m.(Configuration).Client
+	client, _ := createCloudApiClient(m.(Configuration))
 
 	req := cloudapi.CreateDescribeDomainRequest()
 	req.GroupId = d.Get("group_id").(string)
@@ -89,7 +89,7 @@ func resourceApiGatewayDomainCertificateRead(d *schema.ResourceData, m interface
 }
 
 func resourceApiGatewayDomainCertificateDelete(d *schema.ResourceData, m interface{}) error {
-	client := m.(Configuration).Client
+	client, _ := createCloudApiClient(m.(Configuration))
 
 	req := cloudapi.CreateDeleteDomainCertificateRequest()
 	req.GroupId = d.Get("group_id").(string)
@@ -105,7 +105,7 @@ func resourceApiGatewayDomainCertificateDelete(d *schema.ResourceData, m interfa
 	return nil
 }
 
-func fetchCertificateById(certId int, client *sdk.Client) (*cas.DescribeUserCertificateDetailResponse, error) {
+func fetchCertificateById(certId int, client *cas.Client) (*cas.DescribeUserCertificateDetailResponse, error) {
 	certReq := cas.CreateDescribeUserCertificateDetailRequest()
 	certReq.CertId = requests.NewInteger(certId)
 	certRes := cas.CreateDescribeUserCertificateDetailResponse()

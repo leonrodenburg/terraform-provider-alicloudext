@@ -1,6 +1,9 @@
 package alicloudext
 
 import (
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strconv"
 
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
@@ -32,6 +35,16 @@ func resourceCertificate() *schema.Resource {
 				Required: true,
 				ForceNew: true,
 			},
+			"certificate_path": {
+				Type:     schema.TypeString,
+				Optional: true,
+				ForceNew: true,
+			},
+			"private_key_path": {
+				Type:     schema.TypeString,
+				Optional: true,
+				ForceNew: true,
+			},
 			"certificate_url": {
 				Type:     schema.TypeString,
 				Computed: true,
@@ -46,7 +59,7 @@ func resourceCertificate() *schema.Resource {
 
 func resourceCertificateCreate(d *schema.ResourceData, m interface{}) error {
 	config := m.(Configuration)
-	client := config.Client
+	client, _ := createCasClient(config)
 	certUser := certificates.User{
 		Email: d.Get("email").(string),
 	}
@@ -77,6 +90,19 @@ func resourceCertificateCreate(d *schema.ResourceData, m interface{}) error {
 	rawCertificate := certificates.Sanitize(string(issuedCert.Certificate))
 	rawPrivateKey := certificates.Sanitize(string(issuedCert.PrivateKey))
 
+	if certificatePath, ok := d.GetOk("certificate_path"); ok {
+		err := writeToFile(certificatePath.(string), rawCertificate)
+		if err != nil {
+			return err
+		}
+	}
+	if privateKeyPath, ok := d.GetOk("private_key_path"); ok {
+		err := writeToFile(privateKeyPath.(string), rawPrivateKey)
+		if err != nil {
+			return err
+		}
+	}
+
 	req := cas.CreateCreateUserCertificateRequest()
 	req.Cert = rawCertificate
 	req.Key = rawPrivateKey
@@ -96,7 +122,7 @@ func resourceCertificateCreate(d *schema.ResourceData, m interface{}) error {
 }
 
 func resourceCertificateRead(d *schema.ResourceData, m interface{}) error {
-	client := m.(Configuration).Client
+	client, _ := createCasClient(m.(Configuration))
 
 	req := cas.CreateDescribeUserCertificateDetailRequest()
 	id, err := strconv.Atoi(d.Id())
@@ -119,7 +145,7 @@ func resourceCertificateRead(d *schema.ResourceData, m interface{}) error {
 }
 
 func resourceCertificateDelete(d *schema.ResourceData, m interface{}) error {
-	client := m.(Configuration).Client
+	client, _ := createCasClient(m.(Configuration))
 
 	req := cas.CreateDeleteUserCertificateRequest()
 	id, err := strconv.Atoi(d.Id())
@@ -136,4 +162,21 @@ func resourceCertificateDelete(d *schema.ResourceData, m interface{}) error {
 
 	d.SetId("")
 	return nil
+}
+
+func createCasClient(config Configuration) (*cas.Client, error) {
+	client, err := cas.NewClientWithAccessKey(config.Region, config.AccessKey, config.SecretKey)
+	if err != nil {
+		return nil, err
+	}
+	return client, err
+}
+
+func writeToFile(path string, contents string) error {
+	err := os.MkdirAll(filepath.Dir(path), os.ModePerm)
+	if err != nil {
+		return err
+	}
+
+	return ioutil.WriteFile(path, []byte(contents), 0644)
 }

@@ -3,7 +3,6 @@ package alicloudext
 import (
 	"time"
 
-	"github.com/aliyun/alibaba-cloud-sdk-go/sdk"
 	aliclouderrors "github.com/aliyun/alibaba-cloud-sdk-go/sdk/errors"
 	"github.com/aliyun/alibaba-cloud-sdk-go/sdk/requests"
 	"github.com/aliyun/alibaba-cloud-sdk-go/services/alidns"
@@ -42,7 +41,8 @@ func resourceApiGatewayDomain() *schema.Resource {
 }
 
 func resourceApiGatewayDomainCreate(d *schema.ResourceData, m interface{}) error {
-	client := m.(Configuration).Client
+	client, _ := createCloudApiClient(m.(Configuration))
+	dnsClient, _ := createDnsClient(m.(Configuration))
 
 	groupId := d.Get("group_id").(string)
 	group, err := fetchApiGroup(client, groupId)
@@ -50,7 +50,7 @@ func resourceApiGatewayDomainCreate(d *schema.ResourceData, m interface{}) error
 		return err
 	}
 
-	record, err := ensureCnameForApiGroup(client, d.Get("domain").(string), group.SubDomain)
+	record, err := ensureCnameForApiGroup(dnsClient, d.Get("domain").(string), group.SubDomain)
 	if err != nil {
 		return err
 	}
@@ -74,7 +74,7 @@ func resourceApiGatewayDomainCreate(d *schema.ResourceData, m interface{}) error
 	})
 }
 
-func bindDomainToApiGateway(groupId string, domain string, client *sdk.Client) (string, error) {
+func bindDomainToApiGateway(groupId string, domain string, client *cloudapi.Client) (string, error) {
 	req := cloudapi.CreateSetDomainRequest()
 	req.GroupId = groupId
 	req.DomainName = domain
@@ -88,7 +88,7 @@ func bindDomainToApiGateway(groupId string, domain string, client *sdk.Client) (
 }
 
 func resourceApiGatewayDomainRead(d *schema.ResourceData, m interface{}) error {
-	client := m.(Configuration).Client
+	client, _ := createCloudApiClient(m.(Configuration))
 	req := cloudapi.CreateDescribeDomainRequest()
 	req.GroupId = d.Get("group_id").(string)
 	req.DomainName = d.Get("domain").(string)
@@ -106,7 +106,7 @@ func resourceApiGatewayDomainRead(d *schema.ResourceData, m interface{}) error {
 }
 
 func resourceApiGatewayDomainDelete(d *schema.ResourceData, m interface{}) error {
-	client := m.(Configuration).Client
+	client, _ := createDnsClient(m.(Configuration))
 	dnsReq := alidns.CreateDeleteDomainRecordRequest()
 	dnsReq.RecordId = d.Get("record_id").(string)
 	dnsRes := alidns.CreateDeleteDomainRecordResponse()
@@ -128,7 +128,7 @@ func resourceApiGatewayDomainDelete(d *schema.ResourceData, m interface{}) error
 	return nil
 }
 
-func ensureCnameForApiGroup(client *sdk.Client, domain string, value string) (*alidns.Record, error) {
+func ensureCnameForApiGroup(client *alidns.Client, domain string, value string) (*alidns.Record, error) {
 	subdomain := "@"
 	if domainutil.HasSubdomain(domain) {
 		subdomain = domainutil.Subdomain(domain)
@@ -160,7 +160,7 @@ func ensureCnameForApiGroup(client *sdk.Client, domain string, value string) (*a
 	return &alidns.Record{RecordId: res.RecordId}, nil
 }
 
-func fetchApiGroup(client *sdk.Client, groupId string) (*cloudapi.DescribeApiGroupResponse, error) {
+func fetchApiGroup(client *cloudapi.Client, groupId string) (*cloudapi.DescribeApiGroupResponse, error) {
 	req := cloudapi.CreateDescribeApiGroupRequest()
 	req.GroupId = groupId
 	res := cloudapi.CreateDescribeApiGroupResponse()
@@ -169,4 +169,20 @@ func fetchApiGroup(client *sdk.Client, groupId string) (*cloudapi.DescribeApiGro
 		return nil, err
 	}
 	return res, nil
+}
+
+func createDnsClient(config Configuration) (*alidns.Client, error) {
+	client, err := alidns.NewClientWithAccessKey(config.Region, config.AccessKey, config.SecretKey)
+	if err != nil {
+		return nil, err
+	}
+	return client, err
+}
+
+func createCloudApiClient(config Configuration) (*cloudapi.Client, error) {
+	client, err := cloudapi.NewClientWithAccessKey(config.Region, config.AccessKey, config.SecretKey)
+	if err != nil {
+		return nil, err
+	}
+	return client, err
 }
